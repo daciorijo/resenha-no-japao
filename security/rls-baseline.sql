@@ -10,18 +10,18 @@ ALTER TABLE public.bank_connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sync_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trip_goal ENABLE ROW LEVEL SECURITY;
 
--- Remove overly broad existing policies manually before applying this baseline.
+CREATE OR REPLACE FUNCTION public.is_trip_member() RETURNS boolean\nLANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''\nAS $ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = (SELECT auth.uid())); $;\nREVOKE ALL ON FUNCTION public.is_trip_member() FROM PUBLIC;\nGRANT EXECUTE ON FUNCTION public.is_trip_member() TO authenticated;\n\n-- Remove overly broad existing policies manually before applying this baseline.
 -- These policies intentionally do not grant anonymous access.
 CREATE POLICY "trip_members_read_profiles" ON public.profiles
 FOR SELECT TO authenticated
 USING (
-  EXISTS (SELECT 1 FROM public.profiles me WHERE me.id = (SELECT auth.uid()))
+  (SELECT public.is_trip_member())
 );
 
 CREATE POLICY "trip_members_read_balances" ON public.balance_records
 FOR SELECT TO authenticated
 USING (
-  EXISTS (SELECT 1 FROM public.profiles me WHERE me.id = (SELECT auth.uid()))
+  (SELECT public.is_trip_member())
 );
 
 CREATE POLICY "owner_insert_balance" ON public.balance_records
@@ -30,7 +30,7 @@ WITH CHECK (
   user_id = (SELECT auth.uid())
   AND source = 'manual'
   AND amount >= 0
-  AND EXISTS (SELECT 1 FROM public.profiles me WHERE me.id = (SELECT auth.uid()))
+  AND (SELECT public.is_trip_member())
 );
 
 CREATE POLICY "owner_read_bank_connection" ON public.bank_connections
@@ -44,23 +44,23 @@ FOR INSERT TO authenticated
 WITH CHECK (
   user_id = (SELECT auth.uid())
   AND status = 'unavailable'
-  AND EXISTS (SELECT 1 FROM public.profiles me WHERE me.id = (SELECT auth.uid()))
+  AND (SELECT public.is_trip_member())
 );
 
 CREATE POLICY "trip_members_read_goal" ON public.trip_goal
 FOR SELECT TO authenticated
 USING (
-  EXISTS (SELECT 1 FROM public.profiles me WHERE me.id = (SELECT auth.uid()))
+  (SELECT public.is_trip_member())
 );
 
 CREATE POLICY "trip_members_update_goal" ON public.trip_goal
 FOR UPDATE TO authenticated
 USING (
-  EXISTS (SELECT 1 FROM public.profiles me WHERE me.id = (SELECT auth.uid()))
+  (SELECT public.is_trip_member())
 )
 WITH CHECK (
   updated_by = (SELECT auth.uid())
-  AND EXISTS (SELECT 1 FROM public.profiles me WHERE me.id = (SELECT auth.uid()))
+  AND (SELECT public.is_trip_member())
 );
 
 -- Additional production requirements:
