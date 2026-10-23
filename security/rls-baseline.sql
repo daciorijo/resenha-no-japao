@@ -10,7 +10,13 @@ ALTER TABLE public.bank_connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sync_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.trip_goal ENABLE ROW LEVEL SECURITY;
 
-CREATE OR REPLACE FUNCTION public.is_trip_member() RETURNS boolean\nLANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''\nAS $ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = (SELECT auth.uid())); $;\nREVOKE ALL ON FUNCTION public.is_trip_member() FROM PUBLIC;\nGRANT EXECUTE ON FUNCTION public.is_trip_member() TO authenticated;\n\n-- Remove overly broad existing policies manually before applying this baseline.
+CREATE OR REPLACE FUNCTION public.is_trip_member() RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
+AS $ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = (SELECT auth.uid())); $;
+REVOKE ALL ON FUNCTION public.is_trip_member() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.is_trip_member() TO authenticated;
+
+-- Remove overly broad existing policies manually before applying this baseline.
 -- These policies intentionally do not grant anonymous access.
 CREATE POLICY "trip_members_read_profiles" ON public.profiles
 FOR SELECT TO authenticated
