@@ -2,20 +2,27 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
- * Request a bank balance refresh. Open Finance (e.g. Pluggy) credentials live only
- * in server env (PLUGGY_CLIENT_ID / PLUGGY_CLIENT_SECRET). Until they are configured
- * and compatibility is verified, the request is recorded and no balance is invented.
+ * Open Finance is not active. This endpoint records a request, but never
+ * fetches or fabricates balances. Bank credentials must stay server-side.
  */
 export const requestBalanceSync = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const configured = Boolean(process.env["PLUGGY_CLIENT_ID"] && process.env["PLUGGY_CLIENT_SECRET"]);
-    const message = configured
-      ? "Integração configurada, mas a sincronização ainda não foi habilitada."
-      : "Integração bancária ainda não disponível. Atualize o saldo manualmente.";
-    await context.supabase
-      .from("sync_requests")
-      .insert({ user_id: context.userId, status: "unavailable", message });
+    const message =
+      "Sincronização bancária indisponível no momento. Informe seu saldo manualmente.";
+
+    const { error } = await context.supabase.from("sync_requests").insert({
+      user_id: context.userId,
+      status: "unavailable",
+      message,
+    });
+
+    if (error) {
+      return {
+        synced: false,
+        message: "Não foi possível registrar a solicitação. Tente novamente mais tarde.",
+      };
+    }
+
     return { synced: false, message };
   });
-
