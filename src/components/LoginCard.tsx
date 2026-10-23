@@ -10,7 +10,6 @@ const USERS = [
 export function LoginCard() {
   const [who, setWho] = useState(USERS[0]!);
   const [password, setPassword] = useState("");
-  const [firstAccess, setFirstAccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -18,18 +17,10 @@ export function LoginCard() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error } = firstAccess
-      ? await supabase.auth.signUp({ email: who.email, password })
-      : await supabase.auth.signInWithPassword({ email: who.email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email: who.email, password });
     setLoading(false);
     if (error) {
-      setError(
-        firstAccess
-          ? error.message.includes("registered")
-            ? "Este usuário já tem senha. Use Entrar."
-            : "Não foi possível criar a senha (mínimo 6 caracteres, evite senhas comuns)."
-          : "Senha incorreta.",
-      );
+      setError("Não foi possível entrar. Verifique sua senha.");
     }
   }
 
@@ -55,7 +46,7 @@ export function LoginCard() {
       </div>
       <input
         type="password"
-        placeholder={firstAccess ? "Crie uma senha" : "Senha"}
+        placeholder="Senha"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         className="w-full rounded-xl border bg-secondary px-4 py-3 outline-none focus:border-primary"
@@ -67,14 +58,7 @@ export function LoginCard() {
         disabled={loading}
         className="w-full rounded-xl bg-primary py-3 font-semibold text-primary-foreground disabled:opacity-60"
       >
-        {loading ? "..." : firstAccess ? "Criar senha e entrar" : "Entrar"}
-      </button>
-      <button
-        type="button"
-        onClick={() => setFirstAccess(!firstAccess)}
-        className="w-full text-center text-xs text-muted-foreground hover:text-primary"
-      >
-        {firstAccess ? "Já tenho senha" : "Primeiro acesso? Criar senha"}
+        {loading ? "..." : "Entrar"}
       </button>
     </form>
   );
